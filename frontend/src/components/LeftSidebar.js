@@ -5,6 +5,8 @@ import SettingsPanel from './panels/SettingsPanel';
 import ChatPanel from './panels/ChatPanel';
 
 const LeftSidebar = ({ activePanel, onPanelChange }) => {
+    const [isHovering, setIsHovering] = React.useState(false);
+    
     const sidebarIcons = [
         { icon: '🏠', name: 'home', title: 'Home' },
         { icon: '📊', name: 'analytics', title: 'Analytics' },
@@ -25,9 +27,22 @@ const LeftSidebar = ({ activePanel, onPanelChange }) => {
         onPanelChange(null);
     };
 
+    const shouldShowSidebar = activePanel || isHovering;
+
     return (
         <>
-            <div className="left-sidebar">
+            {/* Hover trigger area when sidebar is hidden */}
+            <div 
+                className="sidebar-trigger" 
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+            />
+            
+            <div 
+                className={`left-sidebar ${shouldShowSidebar ? 'visible' : 'hidden'}`}
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+            >
                 {sidebarIcons.map((item, index) => (
                     <div 
                         key={index}
