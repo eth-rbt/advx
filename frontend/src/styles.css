@@ -1,0 +1,301 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Jost', sans-serif;
+    background: radial-gradient(circle at center , #001d3d 0%, #000000 50%, #000000 80%);
+    color: white;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Top Bar Styles */
+.top-bar {
+    background: black;
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 1000;
+}
+
+.logo {
+    font-family: 'Bitcount Mono Single', monospace;
+    font-size: 24px;
+    color: white;
+}
+
+.login-btn {
+    color: white;
+    text-decoration: underline;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 16px;
+    font-family: 'Jost', sans-serif;
+}
+
+.login-btn:hover {
+    opacity: 0.8;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    display: flex;
+    position: relative;
+}
+
+/* Left Sidebar */
+.left-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 60px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    padding: 20px 10px;
+    z-index: 100;
+}
+
+.sidebar-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.3s;
+    font-size: 18px;
+}
+
+.sidebar-icon:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-icon.active {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.1);
+}
+
+.sidebar-panel {
+    position: absolute;
+    left: 60px;
+    top: 0;
+    width: 300px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    padding: 20px;
+    z-index: 90;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-panel.open {
+    transform: translateX(0);
+}
+
+.sidebar-panel h3 {
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 10px;
+}
+
+.panel-content {
+    height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+.metric-card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ffd700;
+}
+
+.metric-label {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 5px;
+}
+
+.setting-item {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.conversation-item:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Tree Container */
+.tree-container {
+    flex: 1;
+    height: 100%;
+    transition: margin-left 0.3s ease;
+}
+
+.tree-container.shifted {
+    margin-left: 360px;
+}
+
+.reactflow-wrapper {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Custom Node Styles */
+.custom-node {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    color: #333;
+    position: relative;
+}
+
+.custom-node:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.3);
+}
+
+.custom-node.priority {
+    border-color: #ffd700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    animation: pulse 2s infinite;
+}
+
+.custom-node.collapsed {
+    background: #f0f0f0;
+    border-color: #999;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+    100% {
+        box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+    }
+}
+
+/* Node Details Panel */
+.node-details-panel {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    width: 320px;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 10px;
+    padding: 20px;
+    z-index: 200;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.node-details-panel.open {
+    transform: translateX(0);
+}
+
+.node-details-panel h3 {
+    margin-bottom: 15px;
+    color: #ffd700;
+}
+
+.node-details-panel p {
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+.node-details-panel strong {
+    color: #ccc;
+}
+
+.close-btn {
+    float: right;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: -5px;
+}
+
+.close-btn:hover {
+    opacity: 0.7;
+}
+
+/* Force Graph Styles */
+.reactflow-wrapper canvas {
+    background: transparent !important;
+}
+
+/* Force Graph Controls */
+.force-graph-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    padding: 5px;
+}
+
+.force-graph-controls button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    margin: 2px;
+    padding: 5px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.force-graph-controls button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
