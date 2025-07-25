@@ -187,7 +187,7 @@ body {
 .tree-container {
     flex: 1;
     height: 100%;
-    transition: margin-left 0.3s ease;
+    transition: margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .tree-container.shifted {
@@ -322,4 +322,60 @@ body {
 
 .force-graph-controls button:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+/* Simulation Controls */
+.simulation-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: rgba(0, 20, 60, 0.9);
+    border-radius: 8px;
+    padding: 8px;
+    z-index: 200;
+    transition: left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    backdrop-filter: blur(10px);
+}
+
+.simulation-controls.shifted {
+    left: calc(50% + 180px);
+}
+
+.control-btn {
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.control-btn:active {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.control-btn:disabled:hover {
+    background: transparent;
+    transform: none;
 }
