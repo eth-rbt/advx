@@ -1,35 +1,38 @@
 import React, { useState } from 'react';
-import { exampleData } from '../../data/exampleData';
 
-const ChatPanel = ({ isOpen, onClose }) => {
+const ChatPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
     const [selectedConversation, setSelectedConversation] = useState(null);
-    const [newMessage, setNewMessage] = useState('');
+    
+    // Combine all nodes and sort by score
+    const allNodes = { ...nodes, ...dynamicNodes };
+    const sortedConversations = Object.values(allNodes)
+        .filter(node => node.convo)
+        .sort((a, b) => (b.score || 0) - (a.score || 0));
 
-    const conversations = Object.values(exampleData.nodes).filter(node => node.convo);
-
-    const handleSendMessage = () => {
-        if (newMessage.trim()) {
-            // In a real app, this would send the message
-            console.log('Sending message:', newMessage);
-            setNewMessage('');
-        }
-    };
 
     return (
         <div className={`sidebar-panel ${isOpen ? 'open' : ''}`}>
             <div className="panel-header">
-                <h3>💬 Active Chats</h3>
+                <h3>💬 Top Scoring Chats</h3>
                 <button className="close-btn" onClick={onClose}>×</button>
             </div>
             <div className="panel-content">
                 {!selectedConversation ? (
                     <>
                         <div style={{ marginBottom: '15px' }}>
-                            <h4>Recent Conversations</h4>
+                            <h4>Conversations by Score</h4>
+                            <p style={{ fontSize: '12px', color: '#666' }}>
+                                Ordered from highest to lowest score
+                            </p>
                         </div>
                         
-                        <div className="conversation-list">
-                            {conversations.map(node => (
+                        <div className="conversation-list" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                            {sortedConversations.length === 0 ? (
+                                <p style={{ fontSize: '14px', color: '#999', textAlign: 'center', padding: '20px' }}>
+                                    No conversations yet. Generate some nodes to see them here!
+                                </p>
+                            ) : (
+                                sortedConversations.map((node, index) => (
                                 <div 
                                     key={node.id}
                                     className="conversation-item"
@@ -39,21 +42,31 @@ const ChatPanel = ({ isOpen, onClose }) => {
                                         background: 'rgba(255,255,255,0.1)', 
                                         borderRadius: '5px',
                                         cursor: 'pointer',
-                                        border: exampleData.board.priorityQueue.includes(node.id) ? '1px solid #ffd700' : '1px solid transparent'
+                                        border: index === 0 ? '2px solid #ffd700' : '1px solid rgba(255,255,255,0.2)'
                                     }}
                                     onClick={() => setSelectedConversation(node)}
                                 >
-                                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                                        Node {node.id} {exampleData.board.priorityQueue.includes(node.id) && '⭐'}
+                                    <div style={{ fontWeight: 'bold', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span>Node {node.id} {index === 0 && '👑'}</span>
+                                        <span style={{ 
+                                            background: `hsl(${(node.score / 100) * 120}, 70%, 50%)`,
+                                            padding: '2px 8px',
+                                            borderRadius: '12px',
+                                            fontSize: '12px',
+                                            color: 'white'
+                                        }}>
+                                            {node.score || 0}
+                                        </span>
                                     </div>
                                     <div style={{ fontSize: '12px', opacity: 0.8 }}>
                                         {node.prompt}
                                     </div>
                                     <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '4px' }}>
-                                        Turns: {node.turns} | Score: {node.score}
+                                        {node.convo && node.convo.substring(0, 100)}...
                                     </div>
                                 </div>
-                            ))}
+                            ))
+                            )}
                         </div>
                     </>
                 ) : (
@@ -65,61 +78,56 @@ const ChatPanel = ({ isOpen, onClose }) => {
                                 border: 'none', 
                                 color: 'white', 
                                 cursor: 'pointer',
-                                marginBottom: '15px'
+                                marginBottom: '15px',
+                                fontSize: '14px'
                             }}
                         >
-                            ← Back to conversations
+                            ← Back to list
                         </button>
                         
-                        <div style={{ marginBottom: '15px' }}>
-                            <h4>Node {selectedConversation.id}</h4>
-                            <p style={{ fontSize: '12px', opacity: 0.8 }}>
-                                {selectedConversation.prompt}
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <h4>Node {selectedConversation.id}</h4>
+                                <span style={{ 
+                                    background: `hsl(${(selectedConversation.score / 100) * 120}, 70%, 50%)`,
+                                    padding: '4px 12px',
+                                    borderRadius: '15px',
+                                    fontSize: '14px',
+                                    color: 'white',
+                                    fontWeight: 'bold'
+                                }}>
+                                    Score: {selectedConversation.score || 0}
+                                </span>
+                            </div>
+                            <p style={{ fontSize: '14px', color: '#999', marginBottom: '15px' }}>
+                                <strong>Prompt:</strong> {selectedConversation.prompt}
                             </p>
                         </div>
 
-                        <div className="chat-messages" style={{ 
-                            height: '200px', 
-                            overflowY: 'auto',
+                        <div style={{ 
                             background: 'rgba(0,0,0,0.3)',
-                            padding: '10px',
-                            borderRadius: '5px',
-                            marginBottom: '10px'
+                            padding: '15px',
+                            borderRadius: '8px',
+                            marginBottom: '15px'
                         }}>
-                            <div style={{ marginBottom: '10px', fontSize: '14px' }}>
-                                <strong>System:</strong> {selectedConversation.convo}
+                            <h5 style={{ marginBottom: '10px' }}>Conversation Content</h5>
+                            <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                                {selectedConversation.convo}
                             </div>
                         </div>
 
-                        <div className="message-input" style={{ display: 'flex', gap: '5px' }}>
-                            <input
-                                type="text"
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Type a message..."
-                                style={{
-                                    flex: 1,
-                                    padding: '8px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid rgba(255,255,255,0.3)',
-                                    borderRadius: '3px',
-                                    color: 'white'
-                                }}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                            />
-                            <button
-                                onClick={handleSendMessage}
-                                style={{
-                                    padding: '8px 12px',
-                                    background: 'rgba(255,255,255,0.2)',
-                                    border: '1px solid rgba(255,255,255,0.3)',
-                                    borderRadius: '3px',
-                                    color: 'white',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Send
-                            </button>
+                        <div style={{ 
+                            background: 'rgba(255,255,255,0.05)',
+                            padding: '10px',
+                            borderRadius: '5px',
+                            fontSize: '12px'
+                        }}>
+                            <div style={{ marginBottom: '5px' }}>
+                                <strong>Turns:</strong> {selectedConversation.turns || 0}
+                            </div>
+                            <div>
+                                <strong>Node ID:</strong> {selectedConversation.id}
+                            </div>
                         </div>
                     </>
                 )}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const SimulationControls = ({ isShifted, onGenerateNode }) => {
+const SimulationControls = ({ onGenerateNode }) => {
     const [isPlaying, setIsPlaying] = useState(true);
 
     const handlePlayPause = () => {
@@ -15,7 +15,7 @@ const SimulationControls = ({ isShifted, onGenerateNode }) => {
     };
 
     return (
-        <div className={`simulation-controls ${isShifted ? 'shifted' : ''}`}>
+        <div className="simulation-controls">
             <button 
                 className="control-btn"
                 onClick={handlePlayPause}

@@ -2,13 +2,12 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import ForceGraph2D from 'react-force-graph-2d';
 import { exampleData } from '../data/exampleData';
 
-const TreeView = ({ leftTabOpen, onNodeSelect, onGenerateNode }) => {
+const TreeView = ({ onNodeSelect, onGenerateNode, nodePositions, setNodePositions, dynamicNodes, setDynamicNodes }) => {
     const [collapsedNodes, setCollapsedNodes] = useState(new Set());
-    const [dynamicNodes, setDynamicNodes] = useState({});
     const [dynamicTree, setDynamicTree] = useState({});
-    const [nodeCounter, setNodeCounter] = useState(7); // Start after existing nodes (1-6)
-    const [nodePositions, setNodePositions] = useState(new Map());
+    const [nodeCounter, setNodeCounter] = useState(2); // Start after node 1
     const graphRef = useRef();
+    const nodePositionsRef = useRef(new Map());
 
     // Handle space key for recentering
     useEffect(() => {
@@ -25,20 +24,12 @@ const TreeView = ({ leftTabOpen, onNodeSelect, onGenerateNode }) => {
         return () => window.removeEventListener('keydown', handleKeyPress);
     }, []);
 
+
     // Function to save current node positions
     const saveNodePositions = useCallback(() => {
-        if (graphRef.current) {
-            const graphData = graphRef.current.graphData();
-            const positions = new Map();
-            
-            graphData.nodes.forEach(node => {
-                if (node.x !== undefined && node.y !== undefined) {
-                    positions.set(node.id, { x: node.x, y: node.y });
-                }
-            });
-            
-            setNodePositions(positions);
-        }
+        // Since we can't directly access node positions from the ref,
+        // we'll rely on the nodePositions state being updated during drag events
+        // The positions are maintained through the nodeCanvasObject callback
     }, []);
 
     // Generate new node function
@@ -73,26 +64,34 @@ const TreeView = ({ leftTabOpen, onNodeSelect, onGenerateNode }) => {
             [newNodeId]: []
         }));
 
-        // Position new node near its parent
-        setTimeout(() => {
-            if (graphRef.current) {
-                const graphData = graphRef.current.graphData();
-                const parentNode = graphData.nodes.find(n => n.id === randomParentId);
-                const newNodeInGraph = graphData.nodes.find(n => n.id === newNodeId);
-                
-                if (parentNode && newNodeInGraph && parentNode.x !== undefined && parentNode.y !== undefined) {
-                    // Position new node near parent with slight offset
-                    const angle = Math.random() * 2 * Math.PI;
-                    const distance = 80;
-                    newNodeInGraph.x = parentNode.x + Math.cos(angle) * distance;
-                    newNodeInGraph.y = parentNode.y + Math.sin(angle) * distance;
-                }
-            }
-        }, 100);
+        // Position new node near its parent using saved positions from ref
+        const parentPosition = nodePositionsRef.current.get(randomParentId);
+        if (parentPosition) {
+            // Calculate position for new node near parent
+            const angle = Math.random() * 2 * Math.PI;
+            const distance = 80;
+            const newPosition = {
+                x: parentPosition.x + Math.cos(angle) * distance,
+                y: parentPosition.y + Math.sin(angle) * distance
+            };
+            
+            // Save the new node position for initial placement
+            setNodePositions(prev => ({
+                ...prev,
+                [newNodeId]: newPosition
+            }));
+        }
 
         setNodeCounter(prev => prev + 1);
         console.log(`Generated new node ${newNodeId} as child of ${randomParentId}`);
-    }, [nodeCounter, dynamicNodes, saveNodePositions]);
+        
+        // Reheat simulation for the new node
+        setTimeout(() => {
+            if (graphRef.current) {
+                graphRef.current.d3ReheatSimulation();
+            }
+        }, 50);
+    }, [nodeCounter, dynamicNodes]);
 
     // Expose generate function
     useEffect(() => {
@@ -114,12 +113,12 @@ const TreeView = ({ leftTabOpen, onNodeSelect, onGenerateNode }) => {
             const isCollapsed = collapsedNodes.has(nodeId);
             const isPriority = exampleData.board.priorityQueue.includes(nodeId);
             const isDynamic = dynamicNodes[nodeId] !== undefined;
-            const savedPosition = nodePositions.get(nodeId);
+            const savedPosition = nodePositions[nodeId];
             
             const node = {
                 id: nodeId,
                 name: nodeId,
-                val: isPriority ? 15 : (isDynamic ? 12 : 10), // Dynamic nodes slightly larger
+                val: 12, // All nodes same size
                 color: isPriority ? '#ffd700' : (isDynamic ? '#90EE90' : '#ffffff'), // Dynamic nodes are light green
                 nodeData: nodeData,
                 isCollapsed: isCollapsed,
@@ -131,8 +130,7 @@ const TreeView = ({ leftTabOpen, onNodeSelect, onGenerateNode }) => {
             if (savedPosition) {
                 node.x = savedPosition.x;
                 node.y = savedPosition.y;
-                node.fx = savedPosition.x; // Fix position temporarily
-                node.fy = savedPosition.y;
+                // Don't fix the position - let physics continue to work
             }
             
             nodes.push(node);
@@ -155,79 +153,60 @@ const TreeView = ({ leftTabOpen, onNodeSelect, onGenerateNode }) => {
         return { nodes, links };
     }, [collapsedNodes, dynamicNodes, dynamicTree, nodePositions]);
 
-    // Unfix positions after graph stabilizes
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (graphRef.current) {
-                const graphData = graphRef.current.graphData();
-                graphData.nodes.forEach(node => {
-                    // Remove fixed position constraints
-                    node.fx = undefined;
-                    node.fy = undefined;
-                });
-            }
-        }, 500); // Allow 500ms for new node to settle
+    // Double-click detection state
+    const [lastClick, setLastClick] = useState({ nodeId: null, time: 0 });
 
-        return () => clearTimeout(timer);
-    }, [dynamicNodes]); // Trigger when new nodes are added
-
-    const [clickTimeout, setClickTimeout] = useState(null);
-    const [isDragging, setIsDragging] = useState(false);
-    
-    const handleNodeDragStart = useCallback(() => {
-        setIsDragging(true);
-    }, []);
-
-    const handleNodeDragEnd = useCallback(() => {
-        // Small delay to distinguish drag from click
-        setTimeout(() => setIsDragging(false), 100);
-    }, []);
-    
+    // Handle node click with double-click detection
     const handleNodeClick = useCallback((node) => {
-        // Don't handle clicks if we were dragging
-        if (isDragging) return;
+        console.log('Node clicked:', node.id, 'hasNodeData:', !!node.nodeData);
+        const currentTime = Date.now();
+        const timeDiff = currentTime - lastClick.time;
         
-        // Clear existing timeout
-        if (clickTimeout) {
-            clearTimeout(clickTimeout);
-            setClickTimeout(null);
-            // This is a double-click
+        // Check if this is a double-click (within 500ms and same node)
+        if (timeDiff < 500 && lastClick.nodeId === node.id) {
+            // Double-click detected - open details
+            console.log('Double-click detected on node:', node.id);
             if (onNodeSelect && node.nodeData) {
+                console.log('Calling onNodeSelect with:', node.nodeData);
                 onNodeSelect(node.nodeData);
+            } else {
+                console.log('onNodeSelect or nodeData missing:', { onNodeSelect: !!onNodeSelect, nodeData: !!node.nodeData });
             }
-            return;
+            // Reset to prevent triple-click
+            setLastClick({ nodeId: null, time: 0 });
+        } else {
+            // First click or different node - just record it
+            console.log('First click recorded for node:', node.id);
+            setLastClick({ nodeId: node.id, time: currentTime });
         }
-        
-        // Set timeout for single click
-        const timeout = setTimeout(() => {
-            // Single click - toggle node
-            const nodeId = node.id;
-            const allTree = { ...exampleData.board.tree, ...dynamicTree };
-            const children = allTree[nodeId] || [];
-            
-            if (children.length > 0) {
-                setCollapsedNodes(prev => {
-                    const newCollapsed = new Set(prev);
-                    if (newCollapsed.has(nodeId)) {
-                        newCollapsed.delete(nodeId);
-                    } else {
-                        newCollapsed.add(nodeId);
-                    }
-                    return newCollapsed;
-                });
-            }
-            setClickTimeout(null);
-        }, 200);
-        
-        setClickTimeout(timeout);
-    }, [onNodeSelect, clickTimeout, isDragging]);
+    }, [onNodeSelect, lastClick]);
+
 
     const nodeCanvasObject = useCallback((node, ctx, globalScale) => {
         if (!ctx || typeof ctx === 'string') return;
         
         const label = node.name;
         const fontSize = Math.max(12/globalScale, 8);
-        const radius = node.val || 10;
+        const radius = 12; // Fixed radius for all nodes
+        
+        // Track node position in ref and update periodically
+        if (node.x !== undefined && node.y !== undefined) {
+            const position = { x: node.x, y: node.y };
+            nodePositionsRef.current.set(node.id, position);
+            
+            // Update parent state if position changed significantly
+            if (!nodePositions[node.id] || 
+                Math.abs(nodePositions[node.id].x - node.x) > 1 || 
+                Math.abs(nodePositions[node.id].y - node.y) > 1) {
+                // Defer state update to avoid render cycle issues
+                setTimeout(() => {
+                    setNodePositions(prev => ({
+                        ...prev,
+                        [node.id]: position
+                    }));
+                }, 0);
+            }
+        }
         
         // Save context state
         ctx.save();
@@ -269,7 +248,7 @@ const TreeView = ({ leftTabOpen, onNodeSelect, onGenerateNode }) => {
         
         // Restore context state
         ctx.restore();
-    }, []);
+    }, [nodePositions, setNodePositions]);
 
     const linkCanvasObject = useCallback((link, ctx) => {
         if (!ctx || typeof ctx === 'string') return;
@@ -289,7 +268,7 @@ const TreeView = ({ leftTabOpen, onNodeSelect, onGenerateNode }) => {
     }, []);
 
     return (
-        <div className={`tree-container ${leftTabOpen ? 'shifted' : ''}`}>
+        <div className="tree-container">
             <div className="reactflow-wrapper">
                 <ForceGraph2D
                     ref={graphRef}
@@ -297,31 +276,42 @@ const TreeView = ({ leftTabOpen, onNodeSelect, onGenerateNode }) => {
                     nodeCanvasObject={nodeCanvasObject}
                     linkCanvasObject={linkCanvasObject}
                     onNodeClick={handleNodeClick}
-                    onNodeDragStart={handleNodeDragStart}
-                    onNodeDragEnd={handleNodeDragEnd}
                     nodePointerAreaPaint={(node, color, ctx) => {
                         // Define clickable area for nodes
                         ctx.fillStyle = color;
                         ctx.beginPath();
-                        ctx.arc(node.x, node.y, node.val || 10, 0, 2 * Math.PI, false);
+                        ctx.arc(node.x, node.y, 15, 0, 2 * Math.PI, false);
                         ctx.fill();
+                    }}
+                    onEngineStop={() => {
+                        // Save all positions when simulation stops
+                        const allPositions = {};
+                        nodePositionsRef.current.forEach((pos, id) => {
+                            allPositions[id] = pos;
+                        });
+                        setNodePositions(allPositions);
                     }}
                     linkDirectionalParticles={2}
                     linkDirectionalParticleSpeed={0.006}
                     linkDirectionalParticleWidth={2}
                     linkDirectionalParticleColor={() => 'rgba(255,255,255,0.6)'}
-                    nodeVal={node => node.val || 10}
+                    nodeVal={() => 12}
                     nodeColor={node => node.color || '#ffffff'}
                     d3Force={{
-                        charge: -300,
-                        link: { distance: 80, strength: 2 },
-                        center: { strength: 0.1 }
+                        charge: -200,
+                        link: { distance: 80, strength: 1 },
+                        center: { strength: 0.05 },
+                        collide: { radius: 30 }
                     }}
                     backgroundColor="transparent"
-                    width={window.innerWidth - (leftTabOpen ? 360 : 0)}
+                    width={window.innerWidth}
                     height={window.innerHeight - 60}
-                    cooldownTicks={100}
-                    enableNodeDrag={true}
+                    cooldownTicks={300}
+                    warmupTicks={0}
+                    d3AlphaDecay={0.05}
+                    d3VelocityDecay={0.4}
+                    d3AlphaMin={0.001}
+                    enableNodeDrag={false}
                     linkWidth={2}
                 />
             </div>

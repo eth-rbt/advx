@@ -4,14 +4,14 @@ import AnalyticsPanel from './panels/AnalyticsPanel';
 import SettingsPanel from './panels/SettingsPanel';
 import ChatPanel from './panels/ChatPanel';
 
-const LeftSidebar = ({ activePanel, onPanelChange }) => {
+const LeftSidebar = ({ activePanel, onPanelChange, nodes, dynamicNodes }) => {
     const [isHovering, setIsHovering] = React.useState(false);
     
     const sidebarIcons = [
-        { icon: '🏠', name: 'home', title: 'Home' },
-        { icon: '📊', name: 'analytics', title: 'Analytics' },
-        { icon: '⚙️', name: 'settings', title: 'Settings' },
-        { icon: '💬', name: 'chat', title: 'Chat' }
+        { icon: '👤', name: 'home', title: 'User Profile' },
+        { icon: '🎯', name: 'settings', title: 'Grader Model' },
+        { icon: '📊', name: 'analytics', title: 'Embeddings' },
+        { icon: '💬', name: 'chat', title: 'Top Chats' }
     ];
 
     const handleIconClick = (panelName) => {
@@ -56,9 +56,9 @@ const LeftSidebar = ({ activePanel, onPanelChange }) => {
             </div>
 
             <HomePanel isOpen={activePanel === 'home'} onClose={handlePanelClose} />
-            <AnalyticsPanel isOpen={activePanel === 'analytics'} onClose={handlePanelClose} />
+            <AnalyticsPanel isOpen={activePanel === 'analytics'} onClose={handlePanelClose} nodes={nodes} dynamicNodes={dynamicNodes} />
             <SettingsPanel isOpen={activePanel === 'settings'} onClose={handlePanelClose} />
-            <ChatPanel isOpen={activePanel === 'chat'} onClose={handlePanelClose} />
+            <ChatPanel isOpen={activePanel === 'chat'} onClose={handlePanelClose} nodes={nodes} dynamicNodes={dynamicNodes} />
         </>
     );
 };
