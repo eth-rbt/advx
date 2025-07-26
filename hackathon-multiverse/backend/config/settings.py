@@ -9,9 +9,9 @@ class Settings(BaseSettings):
     daily_budget_usd: float = 5.0      # crank up for demo day
 
     # Models (use "fake-*" in offline mode)
-    persona_model: str = "qwen/qwen-2.5-72b-instruct"  
+    persona_model: str = "moonshotai/kimi-k2"  
     critic_model: str = "qwen/qwen-2.5-72b-instruct"
-    mutator_model: str = "qwen/qwen-2.5-72b-instruct"
+    mutator_model: str = "moonshotai/kimi-k2"
 
     # Scheduler lambda values
     lambda_trend: float = 0.3
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openrouter_api_key: str = ""
     use_openrouter: bool = True
-    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_base_url: str = "https://openrouter.ai/api/v1" #"https://api.lkeap.tencentcloud.com/v1"
 
     # UI needs these two numbers
     ui_embed_dims: int = 2             # what to send downstream
