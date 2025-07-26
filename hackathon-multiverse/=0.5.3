@@ -1,0 +1,23 @@
+Collecting umap-learn
+  Downloading umap_learn-0.5.9.post2-py3-none-any.whl.metadata (25 kB)
+Requirement already satisfied: numpy>=1.23 in /opt/anaconda3/lib/python3.12/site-packages (from umap-learn) (1.26.4)
+Requirement already satisfied: scipy>=1.3.1 in /opt/anaconda3/lib/python3.12/site-packages (from umap-learn) (1.13.1)
+Collecting scikit-learn>=1.6 (from umap-learn)
+  Downloading scikit_learn-1.7.1-cp312-cp312-macosx_12_0_arm64.whl.metadata (11 kB)
+Requirement already satisfied: numba>=0.51.2 in /opt/anaconda3/lib/python3.12/site-packages (from umap-learn) (0.60.0)
+Collecting pynndescent>=0.5 (from umap-learn)
+  Downloading pynndescent-0.5.13-py3-none-any.whl.metadata (6.8 kB)
+Requirement already satisfied: tqdm in /opt/anaconda3/lib/python3.12/site-packages (from umap-learn) (4.66.5)
+Requirement already satisfied: llvmlite<0.44,>=0.43.0dev0 in /opt/anaconda3/lib/python3.12/site-packages (from numba>=0.51.2->umap-learn) (0.43.0)
+Requirement already satisfied: joblib>=0.11 in /opt/anaconda3/lib/python3.12/site-packages (from pynndescent>=0.5->umap-learn) (1.4.2)
+Requirement already satisfied: threadpoolctl>=3.1.0 in /opt/anaconda3/lib/python3.12/site-packages (from scikit-learn>=1.6->umap-learn) (3.5.0)
+Downloading umap_learn-0.5.9.post2-py3-none-any.whl (90 kB)
+Downloading pynndescent-0.5.13-py3-none-any.whl (56 kB)
+Downloading scikit_learn-1.7.1-cp312-cp312-macosx_12_0_arm64.whl (8.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.6/8.6 MB 1.2 MB/s eta 0:00:00
+Installing collected packages: scikit-learn, pynndescent, umap-learn
+  Attempting uninstall: scikit-learn
+    Found existing installation: scikit-learn 1.5.1
+    Uninstalling scikit-learn-1.5.1:
+      Successfully uninstalled scikit-learn-1.5.1
+Successfully installed pynndescent-0.5.13 scikit-learn-1.7.1 umap-learn-0.5.9.post2

@@ -7,7 +7,8 @@
       "Bash(lsof:*)",
       "Bash(kill:*)",
       "Bash(npm run build:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(npm start)"
     ],
     "deny": []
   }

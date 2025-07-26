@@ -36,3 +36,9 @@ class SettingsUpdate(BaseModel):
     lambda_trend: Optional[float] = None
     lambda_sim: Optional[float] = None
     lambda_depth: Optional[float] = None
+
+
+class SeedRequest(BaseModel):
+    """Request payload for seeding a conversation."""
+    
+    prompt: str

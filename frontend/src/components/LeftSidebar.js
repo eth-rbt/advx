@@ -4,7 +4,7 @@ import AnalyticsPanel from './panels/AnalyticsPanel';
 import SettingsPanel from './panels/SettingsPanel';
 import ChatPanel from './panels/ChatPanel';
 
-const LeftSidebar = ({ activePanel, onPanelChange, nodes, dynamicNodes }) => {
+const LeftSidebar = ({ activePanel, onPanelChange, nodes, dynamicNodes, allNodes, connectionStatus, lastUpdateTime }) => {
     const [isHovering, setIsHovering] = React.useState(false);
     
     const sidebarIcons = [
@@ -58,7 +58,15 @@ const LeftSidebar = ({ activePanel, onPanelChange, nodes, dynamicNodes }) => {
             <HomePanel isOpen={activePanel === 'home'} onClose={handlePanelClose} />
             <AnalyticsPanel isOpen={activePanel === 'analytics'} onClose={handlePanelClose} nodes={nodes} dynamicNodes={dynamicNodes} />
             <SettingsPanel isOpen={activePanel === 'settings'} onClose={handlePanelClose} />
-            <ChatPanel isOpen={activePanel === 'chat'} onClose={handlePanelClose} nodes={nodes} dynamicNodes={dynamicNodes} />
+            <ChatPanel 
+                isOpen={activePanel === 'chat'} 
+                onClose={handlePanelClose} 
+                nodes={nodes} 
+                dynamicNodes={dynamicNodes}
+                allNodes={allNodes}
+                connectionStatus={connectionStatus}
+                lastUpdateTime={lastUpdateTime}
+            />
         </>
     );
 };

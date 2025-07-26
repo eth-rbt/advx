@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Body
-from backend.core.schemas import FocusZone, SettingsUpdate, Node
+from fastapi import APIRouter, HTTPException
+from backend.core.schemas import FocusZone, SettingsUpdate, Node, SeedRequest
 from backend.orchestrator.scheduler import boost_or_seed
 from backend.config.settings import settings
 from backend.core.logger import get_logger
@@ -7,7 +7,7 @@ from backend.db.redis_client import get_redis
 from backend.db.node_store import get, save
 from backend.db.frontier import push
 from backend.core.utils import uuid_str
-from backend.core.embeddings import embed, to_xy, fit_reducer
+from backend.core.embeddings import embed, to_xy
 from backend.core.conversation import get_conversation_path, format_dialogue_history
 
 logger = get_logger(__name__)
@@ -120,18 +120,32 @@ async def get_conversation(node_id: str):
 
 
 @router.post("/seed")
-async def seed(prompt: str = Body(..., embed=True)):
+async def seed(request: SeedRequest):
     """
     Push a first prompt onto the frontier. UI can expose a "Start" button.
     """
-    node = Node(
-        id=uuid_str(),
-        prompt=prompt,
-        depth=0,
-        score=0.5,
-        emb=embed(prompt),
-        xy=list(to_xy(embed(prompt))),
-    )
-    save(node)
-    push(node.id, 1.0)
-    return {"seed_id": node.id}
+    try:
+        prompt = request.prompt
+        
+        # Generate embedding and coordinates
+        prompt_embedding = embed(prompt)
+        coordinates = list(to_xy(prompt_embedding))
+        
+        node = Node(
+            id=uuid_str(),
+            prompt=prompt,
+            depth=0,
+            score=0.5,
+            emb=prompt_embedding,
+            xy=coordinates,
+        )
+        
+        save(node)
+        push(node.id, 1.0)
+        
+        logger.info(f"Seeded conversation with prompt: {prompt[:50]}...")
+        return {"seed_id": node.id, "message": "Conversation seeded successfully"}
+        
+    except Exception as e:
+        logger.error(f"Error seeding conversation: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to seed conversation: {str(e)}")

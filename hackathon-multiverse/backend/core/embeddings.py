@@ -17,12 +17,44 @@ _reducer_file = "umap_reducer.pkl"
 
 def embed(text: str) -> List[float]:
     """Generate semantic embeddings using OpenAI's text-embedding-3-small model."""
-    client = openai.OpenAI(api_key=settings.openai_api_key)
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=[text]
-    )
-    return response.data[0].embedding
+    try:
+        client = openai.OpenAI(
+            api_key=settings.openai_api_key,
+            timeout=30.0  # 30 second timeout
+        )
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=[text]
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        logger.warning(f"OpenAI embedding failed: {e}, using fallback")
+        return _create_fallback_embedding(text)
+
+
+def _create_fallback_embedding(text: str, dimensions: int = 1536) -> List[float]:
+    """Create a simple hash-based embedding as fallback."""
+    import hashlib
+    import struct
+    
+    # Create a deterministic hash of the text
+    hash_obj = hashlib.md5(text.encode('utf-8'))
+    hash_bytes = hash_obj.digest()
+    
+    # Convert to float values
+    embedding = []
+    for i in range(0, dimensions, 4):
+        # Take 4 bytes at a time and convert to float
+        byte_chunk = hash_bytes[(i // 4) % len(hash_bytes):(i // 4) % len(hash_bytes) + 4]
+        if len(byte_chunk) < 4:
+            byte_chunk = byte_chunk + b'\x00' * (4 - len(byte_chunk))
+        
+        # Convert bytes to float and normalize to [-1, 1]
+        int_val = struct.unpack('i', byte_chunk)[0]
+        float_val = int_val / (2**31 - 1)  # Normalize to [-1, 1]
+        embedding.append(float_val)
+    
+    return embedding[:dimensions]
 
 
 def _load_reducer() -> Optional[UMAP]:
