@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hackathon Multiverse - Live Visualization</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 System Prompt Optimization - AI Sales Strategy Evolution</h1>
+            <div class="stats">
+                <div class="stat">
+                    <span class="label">System Prompts:</span>
+                    <span id="totalNodes" class="value">0</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Frontier Size:</span>
+                    <span id="frontierSize" class="value">0</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Avg Effectiveness:</span>
+                    <span id="avgScore" class="value">0.00</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Max Generation:</span>
+                    <span id="maxDepth" class="value">0</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Connection:</span>
+                    <span id="wsStatus" class="value disconnected">Disconnected</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main">
+            <div class="visualization">
+                <h2>System Prompt Strategy Space</h2>
+                <canvas id="graphCanvas" width="800" height="600"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <span class="color-box" style="background: #ff4444;"></span>
+                        <span>Hostile/Skeptical (0.0-0.4)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="color-box" style="background: #ffaa44;"></span>
+                        <span>Interested (0.4-0.6)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="color-box" style="background: #44ff44;"></span>
+                        <span>Convinced/Ready (0.6-1.0)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="section">
+                    <h3>Live Activity</h3>
+                    <div id="activityLog" class="activity-log"></div>
+                </div>
+                
+                <div class="section">
+                    <h3>Top System Prompts</h3>
+                    <div id="bestSystemPrompts" class="system-prompts"></div>
+                </div>
+                
+                <div class="section">
+                    <h3>Sample Conversations</h3>
+                    <div id="sampleConversations" class="conversations"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js?v=8"></script>
+</body>
+</html>

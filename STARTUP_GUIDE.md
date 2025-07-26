@@ -43,7 +43,7 @@ redis-server
 cd hackathon-multiverse
 
 # Create and activate Python virtual environment
-python -m venv .venv
+#python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install Python dependencies
@@ -208,19 +208,13 @@ redis-server
 - Check browser console for CORS errors
 - Verify backend URL in `BackendAPI.js`
 
-**4. Python Import/Dependency Errors**
+**4. Python Import Errors**
 ```bash
 # Ensure virtual environment is activated
 source .venv/bin/activate
 
-# Update pip to latest version
-pip install --upgrade pip
-
-# Install/reinstall all dependencies
+# Reinstall dependencies
 pip install -r requirements.txt
-
-# If specific package missing (like umap-learn):
-pip install umap-learn>=0.5.3
 ```
 
 **5. Node.js Dependency Issues**
