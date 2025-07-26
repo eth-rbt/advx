@@ -1,102 +1,12 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import backendAPI from '../../services/BackendAPI';
+import React, { useEffect, useRef } from 'react';
 import './PanelAnimations.css';
 
-const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
+const AnalyticsPanel = ({ isOpen, onClose, allNodes, tree, computedStats }) => {
     const canvasRef = useRef(null);
-    const [backendNodes, setBackendNodes] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [useBackendData, setUseBackendData] = useState(false);
-    const [connectionStatus, setConnectionStatus] = useState('disconnected');
-    const [lastUpdateTime, setLastUpdateTime] = useState(null);
-    const [totalUpdates, setTotalUpdates] = useState(0);
     
-    const allNodes = useBackendData ? backendNodes : { ...nodes, ...dynamicNodes };
+    // Convert Map to array for processing
+    const nodesArray = allNodes ? Array.from(allNodes.values()) : [];
 
-    // Enhanced WebSocket handler for real-time analytics updates
-    const handleWebSocketMessage = useCallback((message) => {
-        if (!isOpen) return; // Only process if panel is open
-        
-        try {
-            const update = typeof message === 'string' ? JSON.parse(message) : message;
-            
-            if (update.type === 'connection_status') {
-                setConnectionStatus(update.status);
-                return;
-            }
-            
-            // Handle node updates for analytics
-            if (update.id) {
-                console.log('📊 Analytics: Processing node update:', update.id);
-                setBackendNodes(prev => {
-                    const existingIndex = prev.findIndex(n => n.id === update.id);
-                    let newNodes;
-                    
-                    if (existingIndex >= 0) {
-                        // Update existing node
-                        newNodes = [...prev];
-                        newNodes[existingIndex] = { ...newNodes[existingIndex], ...update };
-                    } else {
-                        // Add new node
-                        newNodes = [...prev, update];
-                    }
-                    
-                    return newNodes;
-                });
-                
-                setLastUpdateTime(new Date());
-                setTotalUpdates(prev => prev + 1);
-                setUseBackendData(true);
-            }
-        } catch (error) {
-            console.error('❌ Analytics: Failed to process WebSocket message:', error);
-        }
-    }, [isOpen]);
-    
-    // Load initial backend data and setup WebSocket when panel opens
-    useEffect(() => {
-        if (!isOpen) {
-            // Disconnect WebSocket when panel closes to save resources
-            backendAPI.disconnectWebSocket();
-            return;
-        }
-        
-        const loadBackendNodes = async () => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const graphData = await backendAPI.getGraph();
-                setBackendNodes(graphData);
-                setUseBackendData(true);
-                setLastUpdateTime(new Date());
-                console.log('📊 Analytics: Loaded', graphData.length, 'initial nodes');
-            } catch (err) {
-                console.error('Failed to load backend data for analytics:', err);
-                setError(err.message);
-                setUseBackendData(false);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadBackendNodes();
-        
-        // Setup WebSocket for real-time updates
-        try {
-            backendAPI.connectWebSocket(handleWebSocketMessage);
-            console.log('📊 Analytics: WebSocket connected for real-time updates');
-        } catch (err) {
-            console.error('Failed to connect WebSocket for analytics:', err);
-        }
-        
-        // Cleanup on unmount or when panel closes
-        return () => {
-            if (!isOpen) {
-                backendAPI.disconnectWebSocket();
-            }
-        };
-    }, [isOpen, handleWebSocketMessage]);
 
     useEffect(() => {
         if (!isOpen || !canvasRef.current) return;
@@ -130,7 +40,7 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
         ctx.stroke();
         
         // Draw nodes as points based on semantic embeddings
-        const nodesToDraw = useBackendData ? allNodes : Object.values(allNodes);
+        const nodesToDraw = nodesArray;
         
         // Calculate bounds for proper scaling
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -139,11 +49,11 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
         nodesToDraw.forEach(node => {
             let x, y;
             
-            if (useBackendData && node.xy) {
+            if (node.xy) {
                 // Use UMAP-reduced 2D coordinates from backend
                 x = node.xy[0];
                 y = node.xy[1];
-            } else if (useBackendData && node.emb && node.emb.length >= 2) {
+            } else if (node.emb && node.emb.length >= 2) {
                 // Use first two dimensions of raw embeddings as fallback
                 x = node.emb[0] || 0;
                 y = node.emb[1] || 0;
@@ -172,27 +82,25 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
         minY -= padY; maxY += padY;
         
         // Draw parent-child connections first (behind nodes)
-        if (useBackendData) {
-            ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
-            ctx.lineWidth = 1;
-            
-            nodePositions.forEach(({ node, x, y }) => {
-                if (node.parent) {
-                    const parentPos = nodePositions.find(p => p.node.id === node.parent);
-                    if (parentPos) {
-                        const parentCanvasX = ((parentPos.x - minX) / (maxX - minX)) * canvas.width;
-                        const parentCanvasY = (1 - (parentPos.y - minY) / (maxY - minY)) * canvas.height;
-                        const childCanvasX = ((x - minX) / (maxX - minX)) * canvas.width;
-                        const childCanvasY = (1 - (y - minY) / (maxY - minY)) * canvas.height;
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(parentCanvasX, parentCanvasY);
-                        ctx.lineTo(childCanvasX, childCanvasY);
-                        ctx.stroke();
-                    }
+        ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
+        ctx.lineWidth = 1;
+        
+        nodePositions.forEach(({ node, x, y }) => {
+            if (node.parent) {
+                const parentPos = nodePositions.find(p => p.node.id === node.parent);
+                if (parentPos) {
+                    const parentCanvasX = ((parentPos.x - minX) / (maxX - minX)) * canvas.width;
+                    const parentCanvasY = (1 - (parentPos.y - minY) / (maxY - minY)) * canvas.height;
+                    const childCanvasX = ((x - minX) / (maxX - minX)) * canvas.width;
+                    const childCanvasY = (1 - (y - minY) / (maxY - minY)) * canvas.height;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(parentCanvasX, parentCanvasY);
+                    ctx.lineTo(childCanvasX, childCanvasY);
+                    ctx.stroke();
                 }
-            });
-        }
+            }
+        });
         
         // Draw nodes
         nodePositions.forEach(({ node, x, y }) => {
@@ -203,35 +111,29 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
             
             // Draw node point with size based on depth
             ctx.beginPath();
-            const baseRadius = useBackendData ? 4 : 5;
-            const depth = useBackendData ? (node.depth || 0) : 0;
+            const baseRadius = 4;
+            const depth = node.depth || 0;
             const radius = baseRadius + (depth * 1.5); // Larger nodes for deeper conversations
             ctx.arc(canvasX, canvasY, radius, 0, 2 * Math.PI);
             
             // Color based on score
-            const score = useBackendData ? (node.score || 0) : (node.score || 50) / 100;
-            if (useBackendData) {
-                // Backend scores are 0.0 to 1.0
-                const hue = score * 120; // 0=red, 120=green
-                ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
-            } else {
-                // Example data scores are 0 to 100
-                const hue = (score / 100) * 120;
-                ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
-            }
+            const score = node.score || 0;
+            // Backend scores are 0.0 to 1.0
+            const hue = score * 120; // 0=red, 120=green
+            ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
             ctx.fill();
             
             // Draw border
-            ctx.strokeStyle = useBackendData ? '#fff' : '#ddd';
-            ctx.lineWidth = useBackendData ? 1.5 : 1;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5;
             ctx.stroke();
             
             // Draw label with better positioning
             ctx.fillStyle = 'white';
-            ctx.font = useBackendData ? '11px Arial' : '10px Arial';
+            ctx.font = '11px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            const label = useBackendData ? `${node.depth || 0}` : node.id;
+            const label = `${node.depth || 0}`;
             
             // Add background for label readability
             const labelWidth = ctx.measureText(label).width;
@@ -247,17 +149,17 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
         ctx.fillStyle = '#666';
         ctx.font = '12px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(useBackendData ? 'UMAP Dimension 1' : 'Pseudo-Embedding X', canvas.width / 2, canvas.height - 5);
+        ctx.fillText('UMAP Dimension 1', canvas.width / 2, canvas.height - 5);
         
         ctx.save();
         ctx.translate(15, canvas.height / 2);
         ctx.rotate(-Math.PI / 2);
         ctx.textAlign = 'center';
-        ctx.fillText(useBackendData ? 'UMAP Dimension 2' : 'Pseudo-Embedding Y', 0, 0);
+        ctx.fillText('UMAP Dimension 2', 0, 0);
         ctx.restore();
         
         // Draw scale indicators
-        if (useBackendData && nodePositions.length > 0) {
+        if (nodePositions.length > 0) {
             ctx.fillStyle = '#444';
             ctx.font = '10px Arial';
             ctx.textAlign = 'left';
@@ -266,7 +168,7 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
             ctx.fillText(`${nodePositions.length} nodes`, 5, canvas.height - 20);
         }
         
-    }, [isOpen, allNodes]);
+    }, [isOpen, nodesArray]);
 
     return (
         <div className={`sidebar-panel ${isOpen ? 'open' : ''}`}>
@@ -275,63 +177,38 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
                 <button className="close-btn" onClick={onClose}>×</button>
             </div>
             <div className="panel-content">
-                {/* Enhanced Connection Status Indicator */}
+                {/* Connection Status Indicator */}
                 <div style={{ 
                     marginBottom: '15px', 
                     padding: '10px 12px', 
-                    backgroundColor: useBackendData ? '#1b4d3e' : '#4a4a4a',
+                    backgroundColor: '#1b4d3e',
                     borderRadius: '6px',
                     fontSize: '12px'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                         <div 
-                            className={connectionStatus === 'connecting' ? 'pulse-animation' : ''}
                             style={{
                                 width: '10px',
                                 height: '10px',
                                 borderRadius: '50%',
-                                backgroundColor: connectionStatus === 'connected' ? '#4CAF50' : 
-                                               connectionStatus === 'connecting' ? '#FF9800' : '#f44336'
+                                backgroundColor: '#4CAF50'
                             }} 
                         />
                         <span style={{ fontWeight: 'bold' }}>
-                            {useBackendData ? 'Live Backend Data' : 'Example Data'}
+                            Live Backend Data
                         </span>
-                        {isLoading && <span style={{ color: '#FF9800' }}>Loading...</span>}
                     </div>
                     
-                    {useBackendData && (
-                        <div style={{ fontSize: '10px', color: '#999', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Status: {connectionStatus}</span>
-                            <span>Updates: {totalUpdates}</span>
-                            {lastUpdateTime && (
-                                <span>Last: {lastUpdateTime.toLocaleTimeString()}</span>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {error && (
-                    <div style={{
-                        marginBottom: '15px',
-                        padding: '10px',
-                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                        border: '1px solid #f44336',
-                        borderRadius: '4px',
-                        color: '#ff6666',
-                        fontSize: '12px'
-                    }}>
-                        Backend Error: {error}
+                    <div style={{ fontSize: '10px', color: '#999', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Nodes: {nodesArray.length}</span>
+                        <span>Max Depth: {computedStats?.maxDepth || 0}</span>
                     </div>
-                )}
+                </div>
 
                 <div style={{ marginBottom: '10px' }}>
                     <h4>Node Embeddings (2D Projection)</h4>
                     <p style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
-                        {useBackendData 
-                            ? 'Real conversation nodes with semantic embeddings and trajectory scores.' 
-                            : 'Simulated embedding visualization for demo purposes.'
-                        }
+                        Real conversation nodes with semantic embeddings and trajectory scores.
                     </p>
                 </div>
                 
@@ -362,14 +239,12 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
                         border: '1px solid rgba(76, 175, 80, 0.3)'
                     }}>
                         <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#4CAF50' }}>
-                            {useBackendData ? allNodes.length : Object.keys(allNodes).length}
+                            {nodesArray.length}
                         </div>
                         <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>Total Nodes</div>
-                        {useBackendData && (
-                            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
-                                ✓ Live Updates
-                            </div>
-                        )}
+                        <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                            ✓ Live Updates
+                        </div>
                     </div>
                     <div style={{
                         padding: '12px',
@@ -379,17 +254,12 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
                         border: '1px solid rgba(33, 150, 243, 0.3)'
                     }}>
                         <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#2196F3' }}>
-                            {useBackendData 
-                                ? (allNodes.length > 0 ? Math.max(...allNodes.map(n => n.depth || 0), 0) : 0)
-                                : (Object.keys(allNodes).length > 0 ? Math.max(...Object.values(allNodes).map(n => n.turns || 0), 0) : 0)
-                            }
+                            {computedStats?.maxDepth || 0}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>
-                            {useBackendData ? 'Max Depth' : 'Max Turns'}
-                        </div>
-                        {useBackendData && allNodes.length > 0 && (
+                        <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>Max Depth</div>
+                        {nodesArray.length > 0 && (
                             <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
-                                Avg Score: {(allNodes.reduce((sum, n) => sum + (n.score || 0), 0) / allNodes.length).toFixed(2)}
+                                Avg Score: {computedStats?.averageScore?.toFixed(2) || '0.00'}
                             </div>
                         )}
                     </div>
@@ -397,19 +267,17 @@ const AnalyticsPanel = ({ isOpen, onClose, nodes = {}, dynamicNodes = {} }) => {
                 
                 <div style={{ fontSize: '12px', color: '#888', lineHeight: '1.4' }}>
                     <div style={{ marginBottom: '4px' }}>
-                        <strong>Legend:</strong> {useBackendData ? 'Numbers = Conversation depth' : 'Node IDs'}
+                        <strong>Legend:</strong> Numbers = Conversation depth
                     </div>
                     <div style={{ marginBottom: '4px' }}>
-                        <strong>Colors:</strong> {useBackendData ? 'Trajectory score' : 'Quality score'} (red=hostile, yellow=neutral, green=progress)
+                        <strong>Colors:</strong> Trajectory score (red=hostile, yellow=neutral, green=progress)
                     </div>
                     <div style={{ marginBottom: '4px' }}>
-                        <strong>Size:</strong> {useBackendData ? 'Larger = deeper conversations' : 'Fixed size'}
+                        <strong>Size:</strong> Larger = deeper conversations
                     </div>
-                    {useBackendData && (
-                        <div style={{ fontSize: '11px', color: '#666' }}>
-                            <strong>Connections:</strong> Parent-child conversation relationships
-                        </div>
-                    )}
+                    <div style={{ fontSize: '11px', color: '#666' }}>
+                        <strong>Connections:</strong> Parent-child conversation relationships
+                    </div>
                 </div>
                 
             </div>

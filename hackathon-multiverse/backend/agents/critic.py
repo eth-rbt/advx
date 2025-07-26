@@ -8,10 +8,10 @@ from backend.core.conversation import format_conversation_for_display
 logger = get_logger(__name__)
 
 
-async def score(conversation_history: List[Dict[str, str]]) -> float:
+async def score(conversation_history: List[Dict[str, str]]) -> tuple[float, str]:
     """Score the entire conversation trajectory toward reconciliation goal.
     
-    Returns: score
+    Returns: (score, analysis)
     """
     try:
         # Format conversation for LLM
@@ -122,16 +122,18 @@ async def score(conversation_history: List[Dict[str, str]]) -> float:
         try:
             result = json.loads(reply)
             score_value = float(result['score'])
+            analysis = result['analysis']
             # Log the analysis for debugging
-            logger.info(f"Critic analysis: {result['analysis'][:100]}...")
+            logger.info(f"Critic analysis: {analysis[:100]}...")
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.warning(f"Failed to parse structured response: {e}, reply: {reply[:200]}...")
             # Default to neutral score if parsing fails
             score_value = 0.5
+            analysis = "Error parsing critic response"
         
         score_value = max(0.0, min(1.0, score_value))
         
-        return score_value
+        return score_value, analysis
         
     except PolicyError as e:
         logger.warning(f"Policy violation in critic: {e}")

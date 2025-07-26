@@ -317,6 +317,50 @@ class BackendAPI {
     });
     return links;
   }
+
+  // Worker control endpoints
+  async startWorker() {
+    try {
+      const response = await fetch(`${this.baseURL}/worker/start`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error starting worker:', error);
+      throw error;
+    }
+  }
+
+  async stopWorker() {
+    try {
+      const response = await fetch(`${this.baseURL}/worker/stop`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error stopping worker:', error);
+      throw error;
+    }
+  }
+
+  async getWorkerStatus() {
+    try {
+      const response = await fetch(`${this.baseURL}/worker/status`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting worker status:', error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

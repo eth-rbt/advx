@@ -7,6 +7,7 @@ class Node(BaseModel):
     prompt: str
     reply: Optional[str] = None
     score: Optional[float] = None
+    grader_reasoning: Optional[str] = None
     depth: int
     parent: Optional[str] = None
     emb: Optional[List[float]] = None
@@ -22,12 +23,17 @@ class FocusZone(BaseModel):
 
 
 class GraphUpdate(BaseModel):
-    """Subset of Node for WebSocket broadcast."""
+    """Full Node data for WebSocket broadcast - includes conversation content."""
 
     id: str
     xy: Optional[List[float]]
     score: Optional[float]
+    grader_reasoning: Optional[str] = None
     parent: Optional[str]
+    prompt: str
+    reply: Optional[str] = None
+    depth: int
+    emb: Optional[List[float]] = None
 
 
 class SettingsUpdate(BaseModel):

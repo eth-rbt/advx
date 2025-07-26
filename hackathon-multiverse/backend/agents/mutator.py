@@ -24,7 +24,7 @@ async def variants(conversation_history: List[Dict[str, str]], k: int) -> List[s
                         "that could start a dialogue with Putin about peace and conflict resolution. "
                         "Focus on approaches that might engage him constructively rather than defensively.\n\n"
                         "CRITICAL: Output ONLY the exact message text that should be sent to Putin. "
-                        "Do not include explanations, options, or meta-commentary. Just the pure diplomatic message."
+                        "Do not include explanations, options, or meta-commentary. Just the pure diplomatic message. YOU MUST CONVINCE THEM BY THE END OF YOUR 3RD TURN"
                     )
                 },
                 {

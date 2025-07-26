@@ -4,7 +4,17 @@ import AnalyticsPanel from './panels/AnalyticsPanel';
 import SettingsPanel from './panels/SettingsPanel';
 import ChatPanel from './panels/ChatPanel';
 
-const LeftSidebar = ({ activePanel, onPanelChange, nodes, dynamicNodes, allNodes, connectionStatus, lastUpdateTime }) => {
+const LeftSidebar = ({ 
+    activePanel, 
+    onPanelChange, 
+    allNodes, 
+    tree, 
+    systemStatus, 
+    workerStatus, 
+    computedStats, 
+    selectedNode, 
+    onWorkerControl 
+}) => {
     const [isHovering, setIsHovering] = React.useState(false);
     
     const sidebarIcons = [
@@ -55,17 +65,34 @@ const LeftSidebar = ({ activePanel, onPanelChange, nodes, dynamicNodes, allNodes
                 ))}
             </div>
 
-            <HomePanel isOpen={activePanel === 'home'} onClose={handlePanelClose} />
-            <AnalyticsPanel isOpen={activePanel === 'analytics'} onClose={handlePanelClose} nodes={nodes} dynamicNodes={dynamicNodes} />
-            <SettingsPanel isOpen={activePanel === 'settings'} onClose={handlePanelClose} />
+            <HomePanel 
+                isOpen={activePanel === 'home'} 
+                onClose={handlePanelClose} 
+                allNodes={allNodes}
+                tree={tree}
+                systemStatus={systemStatus}
+                computedStats={computedStats}
+            />
+            <AnalyticsPanel 
+                isOpen={activePanel === 'analytics'} 
+                onClose={handlePanelClose} 
+                allNodes={allNodes}
+                tree={tree}
+                computedStats={computedStats}
+            />
+            <SettingsPanel 
+                isOpen={activePanel === 'settings'} 
+                onClose={handlePanelClose} 
+                workerStatus={workerStatus}
+                onWorkerControl={onWorkerControl}
+            />
             <ChatPanel 
                 isOpen={activePanel === 'chat'} 
                 onClose={handlePanelClose} 
-                nodes={nodes} 
-                dynamicNodes={dynamicNodes}
                 allNodes={allNodes}
-                connectionStatus={connectionStatus}
-                lastUpdateTime={lastUpdateTime}
+                tree={tree}
+                selectedNode={selectedNode}
+                systemStatus={systemStatus}
             />
         </>
     );

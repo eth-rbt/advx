@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import backendAPI from '../../services/BackendAPI';
 
-const SettingsPanel = ({ isOpen, onClose }) => {
+const SettingsPanel = ({ isOpen, onClose, workerStatus, onWorkerControl }) => {
     const [graderPrompt, setGraderPrompt] = useState('');
     const [settings, setSettings] = useState({
         lambda_trend: 0.3,
@@ -122,8 +122,72 @@ const SettingsPanel = ({ isOpen, onClose }) => {
                     </div>
                 )}
 
-                {/* Backend Priority Lambda Settings */}
+                {/* Worker Status and Controls */}
                 <div style={{ marginBottom: '25px' }}>
+                    <h4>Worker Control</h4>
+                    <div style={{
+                        marginBottom: '15px',
+                        padding: '10px 12px',
+                        backgroundColor: '#1b4d3e',
+                        borderRadius: '6px',
+                        fontSize: '12px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                            <div style={{
+                                width: '10px',
+                                height: '10px',
+                                borderRadius: '50%',
+                                backgroundColor: workerStatus?.status === 'running' ? '#4CAF50' : '#f44336'
+                            }} />
+                            <span style={{ fontWeight: 'bold' }}>
+                                Worker Status: {workerStatus?.status || 'unknown'}
+                            </span>
+                        </div>
+                        {workerStatus?.pid && (
+                            <div style={{ fontSize: '10px', color: '#999' }}>
+                                PID: {workerStatus.pid} | Last Heartbeat: {workerStatus.lastHeartbeat?.toLocaleTimeString()}
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                        <button
+                            onClick={() => onWorkerControl?.('start')}
+                            disabled={isLoading || workerStatus?.status === 'running'}
+                            style={{
+                                flex: 1,
+                                padding: '10px',
+                                backgroundColor: workerStatus?.status === 'running' ? '#666' : '#4CAF50',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: workerStatus?.status === 'running' || isLoading ? 'not-allowed' : 'pointer',
+                                fontSize: '14px'
+                            }}
+                        >
+                            Start Worker
+                        </button>
+                        <button
+                            onClick={() => onWorkerControl?.('stop')}
+                            disabled={isLoading || workerStatus?.status !== 'running'}
+                            style={{
+                                flex: 1,
+                                padding: '10px',
+                                backgroundColor: workerStatus?.status !== 'running' ? '#666' : '#f44336',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: workerStatus?.status !== 'running' || isLoading ? 'not-allowed' : 'pointer',
+                                fontSize: '14px'
+                            }}
+                        >
+                            Stop Worker
+                        </button>
+                    </div>
+                </div>
+
+                {/* Backend Priority Lambda Settings */}
+                <div style={{ marginBottom: '25px', paddingTop: '20px', borderTop: '1px solid #333' }}>
                     <h4>Priority Calculation Parameters</h4>
                     <p style={{ fontSize: '12px', color: '#666', marginBottom: '15px' }}>
                         Adjust how the system prioritizes nodes for processing. Formula: Score + λ_trend×ΔScore - λ_sim×Similarity - λ_depth×Depth

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import backendAPI from '../services/BackendAPI';
+import { getConversationPath } from '../utils/dataTransforms';
 
-const NodeDetailsPanel = ({ isOpen, selectedNode, onClose }) => {
+const NodeDetailsPanel = ({ isOpen, selectedNode, tree, allNodes, onClose }) => {
     const [fullConversation, setFullConversation] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -17,7 +18,31 @@ const NodeDetailsPanel = ({ isOpen, selectedNode, onClose }) => {
             setIsLoading(true);
             setError(null);
             try {
-                // Try to load backend conversation first
+                // First try to build conversation from centralized tree data
+                if (tree && allNodes) {
+                    const conversationPath = getConversationPath(tree, selectedNode.id);
+                    if (conversationPath.length > 0) {
+                        const conversation = [];
+                        conversationPath.forEach((node, index) => {
+                            if (node.prompt) {
+                                conversation.push({ role: 'user', content: node.prompt });
+                            }
+                            if (node.reply) {
+                                conversation.push({ role: 'assistant', content: node.reply });
+                            }
+                        });
+                        
+                        setFullConversation({
+                            conversation,
+                            nodes_in_path: conversationPath.length,
+                            depth: conversationPath[conversationPath.length - 1]?.depth || 0
+                        });
+                        setIsLoading(false);
+                        return;
+                    }
+                }
+                
+                // Fallback to backend API
                 const conversationData = await backendAPI.getConversation(selectedNode.id);
                 if (conversationData && !conversationData.error) {
                     setFullConversation(conversationData);
@@ -35,7 +60,7 @@ const NodeDetailsPanel = ({ isOpen, selectedNode, onClose }) => {
         };
 
         loadConversation();
-    }, [selectedNode]);
+    }, [selectedNode, tree, allNodes]);
 
     if (!selectedNode) return null;
 
@@ -66,37 +91,37 @@ const NodeDetailsPanel = ({ isOpen, selectedNode, onClose }) => {
             );
         }
 
-        if (fullConversation && fullConversation.conversation) {
+        if (fullConversation && fullConversation.conversation && fullConversation.conversation.length > 0) {
             return (
                 <div>
-                    <div style={{ marginBottom: '10px', fontSize: '14px', color: '#999' }}>
-                        <strong>Conversation Path ({fullConversation.nodes_in_path} nodes, depth {fullConversation.depth})</strong>
+                    <div style={{ marginBottom: '15px', fontSize: '14px', color: '#999' }}>
+                        <strong>Full Conversation Thread ({fullConversation.nodes_in_path} nodes, depth {fullConversation.depth})</strong>
                     </div>
                     <div style={{
-                        maxHeight: '400px',
-                        overflowY: 'auto',
                         border: '1px solid #333',
                         borderRadius: '5px',
-                        padding: '10px'
+                        padding: '15px',
+                        backgroundColor: 'rgba(0,0,0,0.3)'
                     }}>
                         {fullConversation.conversation.map((turn, index) => (
                             <div key={index} style={{
-                                marginBottom: '15px',
-                                paddingBottom: '10px',
-                                borderBottom: index < fullConversation.conversation.length - 1 ? '1px solid #333' : 'none'
+                                marginBottom: '20px',
+                                paddingBottom: '15px',
+                                borderBottom: index < fullConversation.conversation.length - 1 ? '1px solid #444' : 'none'
                             }}>
                                 <div style={{
                                     fontWeight: 'bold',
                                     color: turn.role === 'user' ? '#4CAF50' : '#2196F3',
-                                    marginBottom: '5px',
-                                    fontSize: '14px'
+                                    marginBottom: '8px',
+                                    fontSize: '15px'
                                 }}>
                                     {turn.role === 'user' ? '🧑 Human:' : '🤖 Putin:'}
                                 </div>
                                 <div style={{
-                                    lineHeight: '1.5',
+                                    lineHeight: '1.6',
                                     fontSize: '14px',
-                                    paddingLeft: '20px'
+                                    paddingLeft: '25px',
+                                    color: '#eee'
                                 }}>
                                     {turn.content}
                                 </div>
@@ -107,28 +132,88 @@ const NodeDetailsPanel = ({ isOpen, selectedNode, onClose }) => {
             );
         }
 
-        // Fallback to basic node data
+        // Fallback to show current node's prompt and reply
+        if (selectedNode.prompt || selectedNode.reply) {
+            return (
+                <div>
+                    <div style={{ marginBottom: '15px', fontSize: '14px', color: '#999' }}>
+                        <strong>Node Conversation (Depth {selectedNode.depth || 0})</strong>
+                    </div>
+                    <div style={{
+                        border: '1px solid #333',
+                        borderRadius: '5px',
+                        padding: '15px',
+                        backgroundColor: 'rgba(0,0,0,0.3)'
+                    }}>
+                        {selectedNode.prompt && (
+                            <div style={{ marginBottom: '20px' }}>
+                                <div style={{
+                                    fontWeight: 'bold',
+                                    color: '#4CAF50',
+                                    marginBottom: '8px',
+                                    fontSize: '15px'
+                                }}>
+                                    🧑 Human:
+                                </div>
+                                <div style={{
+                                    lineHeight: '1.6',
+                                    fontSize: '14px',
+                                    paddingLeft: '25px',
+                                    color: '#eee'
+                                }}>
+                                    {selectedNode.prompt}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {selectedNode.reply && (
+                            <div>
+                                <div style={{
+                                    fontWeight: 'bold',
+                                    color: '#2196F3',
+                                    marginBottom: '8px',
+                                    fontSize: '15px'
+                                }}>
+                                    🤖 Putin:
+                                </div>
+                                <div style={{
+                                    lineHeight: '1.6',
+                                    fontSize: '14px',
+                                    paddingLeft: '25px',
+                                    color: '#eee'
+                                }}>
+                                    {selectedNode.reply}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        // Last fallback for old format data
         if (selectedNode.convo) {
             return (
                 <div>
-                    <p><strong>Conversation:</strong></p>
-                    <p style={{ 
-                        fontStyle: 'italic', 
-                        marginTop: '5px', 
-                        padding: '10px', 
-                        background: 'rgba(255, 255, 255, 0.1)', 
+                    <div style={{ marginBottom: '15px', fontSize: '14px', color: '#999' }}>
+                        <strong>Conversation Content</strong>
+                    </div>
+                    <div style={{ 
+                        padding: '15px', 
+                        background: 'rgba(0,0,0,0.3)', 
                         borderRadius: '5px',
-                        lineHeight: '1.5'
+                        lineHeight: '1.6',
+                        color: '#eee'
                     }}>
                         {selectedNode.convo}
-                    </p>
+                    </div>
                 </div>
             );
         }
 
         return (
             <div style={{ color: '#999', fontStyle: 'italic' }}>
-                No conversation data available
+                No conversation data available for this node
             </div>
         );
     };
@@ -160,6 +245,25 @@ const NodeDetailsPanel = ({ isOpen, selectedNode, onClose }) => {
                             : selectedNode.score)
                         : 'N/A'
                 }</p>
+                {selectedNode.grader_reasoning && (
+                    <div style={{ marginTop: '15px' }}>
+                        <p><strong>Grader Analysis:</strong></p>
+                        <div style={{
+                            padding: '12px',
+                            backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                            border: '1px solid rgba(255, 215, 0, 0.3)',
+                            borderRadius: '5px',
+                            fontSize: '13px',
+                            lineHeight: '1.5',
+                            color: '#f0f0f0',
+                            maxHeight: '200px',
+                            overflowY: 'auto',
+                            whiteSpace: 'pre-wrap'
+                        }}>
+                            {selectedNode.grader_reasoning}
+                        </div>
+                    </div>
+                )}
                 {selectedNode.parent && (
                     <p><strong>Parent:</strong> {selectedNode.parent}</p>
                 )}

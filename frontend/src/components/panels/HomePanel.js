@@ -1,52 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import backendAPI from '../../services/BackendAPI';
+import React, { useState } from 'react';
 
-const HomePanel = ({ isOpen, onClose }) => {
+const HomePanel = ({ isOpen, onClose, allNodes, tree, systemStatus, computedStats }) => {
     const [userPrompt, setUserPrompt] = useState('');
-    const [graphStats, setGraphStats] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-
-    // Load graph statistics when panel opens
-    useEffect(() => {
-        if (!isOpen) return;
-        
-        const loadGraphStats = async () => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const graphData = await backendAPI.getGraph();
-                
-                // Calculate statistics
-                const stats = {
-                    totalNodes: graphData.length,
-                    maxDepth: graphData.length > 0 ? Math.max(...graphData.map(n => n.depth || 0)) : 0,
-                    averageScore: graphData.length > 0 
-                        ? graphData.reduce((sum, n) => sum + (n.score || 0), 0) / graphData.length 
-                        : 0,
-                    nodesByDepth: graphData.reduce((acc, node) => {
-                        const depth = node.depth || 0;
-                        acc[depth] = (acc[depth] || 0) + 1;
-                        return acc;
-                    }, {}),
-                    topScoringNode: graphData.length > 0 
-                        ? graphData.reduce((top, node) => 
-                            (node.score || 0) > (top.score || 0) ? node : top
-                          )
-                        : null
-                };
-                
-                setGraphStats(stats);
-            } catch (err) {
-                console.error('Failed to load graph stats:', err);
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadGraphStats();
-    }, [isOpen]);
 
     const handleSave = () => {
         console.log('User prompt saved:', userPrompt);
@@ -64,18 +19,7 @@ const HomePanel = ({ isOpen, onClose }) => {
                 <div style={{ marginBottom: '25px' }}>
                     <h4>Conversation Graph Overview</h4>
                     
-                    {isLoading && (
-                        <div style={{
-                            padding: '20px',
-                            textAlign: 'center',
-                            color: '#999',
-                            fontSize: '14px'
-                        }}>
-                            Loading graph statistics...
-                        </div>
-                    )}
-
-                    {error && (
+                    {systemStatus?.errors?.length > 0 && (
                         <div style={{
                             padding: '10px',
                             backgroundColor: 'rgba(244, 67, 54, 0.1)',
@@ -85,11 +29,11 @@ const HomePanel = ({ isOpen, onClose }) => {
                             fontSize: '12px',
                             marginBottom: '15px'
                         }}>
-                            Error loading stats: {error}
+                            Recent errors: {systemStatus.errors[systemStatus.errors.length - 1]?.error}
                         </div>
                     )}
 
-                    {graphStats && (
+                    {computedStats && (
                         <div style={{ 
                             display: 'grid', 
                             gridTemplateColumns: '1fr 1fr', 
@@ -103,7 +47,7 @@ const HomePanel = ({ isOpen, onClose }) => {
                                 textAlign: 'center'
                             }}>
                                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#4CAF50' }}>
-                                    {graphStats.totalNodes}
+                                    {computedStats.totalNodes}
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#999' }}>Total Nodes</div>
                             </div>
@@ -114,7 +58,7 @@ const HomePanel = ({ isOpen, onClose }) => {
                                 textAlign: 'center'
                             }}>
                                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2196F3' }}>
-                                    {graphStats.maxDepth}
+                                    {computedStats.maxDepth}
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#999' }}>Max Depth</div>
                             </div>
@@ -125,7 +69,7 @@ const HomePanel = ({ isOpen, onClose }) => {
                                 textAlign: 'center'
                             }}>
                                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ff9800' }}>
-                                    {graphStats.averageScore.toFixed(3)}
+                                    {computedStats.averageScore.toFixed(3)}
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#999' }}>Avg Score</div>
                             </div>
@@ -136,14 +80,14 @@ const HomePanel = ({ isOpen, onClose }) => {
                                 textAlign: 'center'
                             }}>
                                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#9c27b0' }}>
-                                    {Object.keys(graphStats.nodesByDepth).length}
+                                    {Object.keys(computedStats.nodesByDepth).length}
                                 </div>
                                 <div style={{ fontSize: '12px', color: '#999' }}>Depth Levels</div>
                             </div>
                         </div>
                     )}
 
-                    {graphStats?.topScoringNode && (
+                    {computedStats?.topScoringNode && (
                         <div style={{
                             padding: '12px',
                             backgroundColor: '#1b4d3e',
@@ -154,11 +98,11 @@ const HomePanel = ({ isOpen, onClose }) => {
                                 Best Performing Node
                             </div>
                             <div style={{ fontSize: '12px', color: '#ccc' }}>
-                                <strong>ID:</strong> {graphStats.topScoringNode.id} | 
-                                <strong> Score:</strong> {graphStats.topScoringNode.score?.toFixed(3) || 'N/A'} | 
-                                <strong> Depth:</strong> {graphStats.topScoringNode.depth || 0}
+                                <strong>ID:</strong> {computedStats.topScoringNode.id} | 
+                                <strong> Score:</strong> {computedStats.topScoringNode.score?.toFixed(3) || 'N/A'} | 
+                                <strong> Depth:</strong> {computedStats.topScoringNode.depth || 0}
                             </div>
-                            {graphStats.topScoringNode.prompt && (
+                            {computedStats.topScoringNode.prompt && (
                                 <div style={{ 
                                     fontSize: '11px', 
                                     color: '#aaa', 
@@ -167,7 +111,7 @@ const HomePanel = ({ isOpen, onClose }) => {
                                     maxHeight: '40px',
                                     overflow: 'hidden'
                                 }}>
-                                    "{graphStats.topScoringNode.prompt.substring(0, 100)}..."
+                                    "{computedStats.topScoringNode.prompt.substring(0, 100)}..."
                                 </div>
                             )}
                         </div>

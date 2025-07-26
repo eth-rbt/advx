@@ -33,7 +33,7 @@ async def process_variant(variant_prompt: str, parent: Node, parent_conversation
         ]
         
         # Score the entire conversation trajectory
-        variant_score = await score(full_conversation)
+        variant_score, grader_reasoning = await score(full_conversation)
         
         # Generate embedding and 2D projection
         emb = embed(variant_prompt)
@@ -45,6 +45,7 @@ async def process_variant(variant_prompt: str, parent: Node, parent_conversation
             prompt=variant_prompt,
             reply=reply,
             score=variant_score,
+            grader_reasoning=grader_reasoning,
             depth=parent.depth + 1,
             parent=parent.id,
             emb=emb,
@@ -62,7 +63,15 @@ async def process_variant(variant_prompt: str, parent: Node, parent_conversation
         
         # Publish GraphUpdate to Redis for WebSocket broadcast
         graph_update = GraphUpdate(
-            id=child.id, xy=child.xy, score=child.score, parent=child.parent
+            id=child.id, 
+            xy=child.xy, 
+            score=child.score,
+            grader_reasoning=child.grader_reasoning,
+            parent=child.parent,
+            prompt=child.prompt,
+            reply=child.reply,
+            depth=child.depth,
+            emb=child.emb
         )
         r = get_redis()
         r.publish("graph_updates", graph_update.model_dump_json())

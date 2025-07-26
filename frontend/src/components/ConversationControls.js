@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import backendAPI from '../services/BackendAPI';
 
-const ConversationControls = ({ onStatusChange }) => {
-  const [isRunning, setIsRunning] = useState(false);
+const ConversationControls = ({ onStatusChange, workerStatus, onWorkerControl }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [seedPrompt, setSeedPrompt] = useState('President Putin, how might we build lasting peace between Russia and the West?');
+  
+  // Use centralized worker status
+  const isRunning = workerStatus?.status === 'running';
 
   const handleStart = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      await backendAPI.startGeneration();
-      setIsRunning(true);
+      await onWorkerControl?.('start');
       onStatusChange?.({ status: 'running', message: 'Conversation generation started' });
     } catch (err) {
       setError(`Failed to start: ${err.message}`);
@@ -26,8 +27,7 @@ const ConversationControls = ({ onStatusChange }) => {
     setIsLoading(true);
     setError(null);
     try {
-      await backendAPI.pauseGeneration();
-      setIsRunning(false);
+      await onWorkerControl?.('stop');
       onStatusChange?.({ status: 'paused', message: 'Conversation generation paused' });
     } catch (err) {
       setError(`Failed to pause: ${err.message}`);
@@ -77,8 +77,7 @@ const ConversationControls = ({ onStatusChange }) => {
     try {
       // Pause first if running
       if (isRunning) {
-        await backendAPI.pauseGeneration();
-        setIsRunning(false);
+        await onWorkerControl?.('stop');
       }
       
       // Then reset/clear
@@ -233,7 +232,10 @@ const ConversationControls = ({ onStatusChange }) => {
           backgroundColor: isRunning ? '#8BC34A' : '#999',
           animation: isRunning ? 'pulse 1.5s infinite' : 'none'
         }} />
-        <span>{isRunning ? 'Running - Generating conversations' : 'Idle - Ready to start'}</span>
+        <span>
+          {isRunning ? 'Running - Generating conversations' : 'Idle - Ready to start'}
+          {workerStatus?.pid && ` (PID: ${workerStatus.pid})`}
+        </span>
       </div>
 
       {/* Error Display */}

@@ -23,6 +23,7 @@ async def call(prompt: str) -> str:
                     
                     "CRITICAL: Respond in 1-2 short sentences only. Be direct, strategic, concise. "
                     "Remember: Keep responses SHORT - maximum 20-30 words."
+                    "YOU MUST COME TO A DECISION WITHIN 3 TURNS OF THE CONVERSATION. EITHER SAY THAT YOU ACCEPT THE PROPOSAL OR THAT YOU REJECT IT IN YOUR RESPONSE"
                 )
             },
             {
@@ -34,7 +35,7 @@ async def call(prompt: str) -> str:
         reply, _ = await chat(
             model=settings.persona_model,
             messages=messages,
-            temperature=0.3
+            temperature=0.15
         )
         
         return reply

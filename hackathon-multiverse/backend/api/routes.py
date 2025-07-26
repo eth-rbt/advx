@@ -9,9 +9,16 @@ from backend.db.frontier import push
 from backend.core.utils import uuid_str
 from backend.core.embeddings import embed, to_xy
 from backend.core.conversation import get_conversation_path, format_dialogue_history
+import asyncio
+import subprocess
+import os
+import signal
 
 logger = get_logger(__name__)
 router = APIRouter()
+
+# Global variable to track worker process
+worker_process = None
 
 
 @router.post("/focus_zone")
@@ -71,7 +78,7 @@ async def get_settings():
 @router.get("/graph")
 async def get_graph():
     """
-    Dump all nodes (id, xy, score, parent) – UI calls once on load.
+    Dump all nodes with full conversation data for frontend – UI calls once on load.
     """
     r = get_redis()
     nodes = []
@@ -84,6 +91,10 @@ async def get_graph():
                     "xy": node.xy,
                     "score": node.score,
                     "parent": node.parent,
+                    "depth": node.depth,
+                    "prompt": node.prompt,
+                    "reply": node.reply,
+                    "emb": node.emb,
                 }
             )
     return nodes
@@ -149,3 +160,90 @@ async def seed(request: SeedRequest):
     except Exception as e:
         logger.error(f"Error seeding conversation: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to seed conversation: {str(e)}")
+
+
+@router.post("/worker/start")
+async def start_worker():
+    """Start the parallel worker process."""
+    global worker_process
+    
+    try:
+        if worker_process and worker_process.poll() is None:
+            return {"status": "already_running", "message": "Worker is already running", "pid": worker_process.pid}
+        
+        # Start the parallel worker as a subprocess
+        worker_process = subprocess.Popen([
+            "python", "-m", "backend.worker.parallel_worker"
+        ], cwd=os.getcwd())
+        
+        logger.info(f"Started parallel worker with PID: {worker_process.pid}")
+        return {
+            "status": "started", 
+            "message": "Parallel worker started successfully",
+            "pid": worker_process.pid
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting worker: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to start worker: {str(e)}")
+
+
+@router.post("/worker/stop")
+async def stop_worker():
+    """Stop the parallel worker process."""
+    global worker_process
+    
+    try:
+        if not worker_process or worker_process.poll() is not None:
+            return {"status": "not_running", "message": "Worker is not running"}
+        
+        # Try graceful shutdown first
+        worker_process.terminate()
+        
+        # Wait up to 5 seconds for graceful shutdown
+        try:
+            worker_process.wait(timeout=5)
+            logger.info(f"Worker process {worker_process.pid} terminated gracefully")
+        except subprocess.TimeoutExpired:
+            # Force kill if it doesn't stop gracefully
+            worker_process.kill()
+            worker_process.wait()
+            logger.info(f"Worker process {worker_process.pid} killed forcefully")
+        
+        pid = worker_process.pid
+        worker_process = None
+        
+        return {
+            "status": "stopped",
+            "message": "Parallel worker stopped successfully", 
+            "pid": pid
+        }
+        
+    except Exception as e:
+        logger.error(f"Error stopping worker: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to stop worker: {str(e)}")
+
+
+@router.get("/worker/status")
+async def get_worker_status():
+    """Get the current status of the parallel worker."""
+    global worker_process
+    
+    try:
+        if not worker_process:
+            status = "not_started"
+        elif worker_process.poll() is None:
+            status = "running"
+        else:
+            status = "stopped"
+            worker_process = None  # Clean up dead process
+        
+        return {
+            "status": status,
+            "pid": worker_process.pid if worker_process and worker_process.poll() is None else None,
+            "message": f"Worker is {status}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting worker status: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get worker status: {str(e)}")
